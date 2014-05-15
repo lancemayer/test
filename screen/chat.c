@@ -14,7 +14,7 @@ int main() {
   move(y, x);
   while ((c = getch()) != 27) {
     if ((c == KEY_UP) || (c == KEY_DOWN) || (c == KEY_LEFT) || (c == KEY_RIGHT)) {
-      arrowKey(c, &y, &x);
+      arrowKey(c, &y, &x); // processes arrow key input
     }
     else if (c == 10) {
       y = y + 1;
@@ -22,7 +22,7 @@ int main() {
       move(y, x);
     }
     else {
-      printw("%c", c);
+      printw("%c", c); // prints characters from input
       x = x + 1;
       if (x > 80) {
 	x = 0;
@@ -50,7 +50,7 @@ void arrowKey(int c, int* y, int* x) {
   case KEY_LEFT:
     if ((*x == 0) && (*y != 0)) {
       *x = 80;
-      *y = *y - 1;
+      *y = *y - 1; // wraps cursor to previous line
     }
     else if (*x != 0) {	
       *x = *x - 1;
@@ -59,7 +59,7 @@ void arrowKey(int c, int* y, int* x) {
     break;
   case KEY_RIGHT:
     *x = *x + 1;
-    if (*x > 80) {
+    if (*x > 80) { // wraps cursor to next line
       *x = 0;
       *y = *y + 1;
     }
