@@ -1,34 +1,130 @@
 #include <ncurses.h>
 
-#define LINE_LENGTH 80
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdlib.h>
+
+
+#define LINE_LENGTH 50
+#define MAX_BUFF 4096
 
 void arrowKey(int, int*, int*);
 
 int main() {
+
+  ///////////////////////////////////////////////
+  //        Draw screen for chat layout        //
+  ///////////////////////////////////////////////
+
   initscr();
-  noecho();
-  int y = 0;
+  int y = 3;
   int x = 0;
+  
+  move(y, x);
+  while (x < (LINE_LENGTH + 1)) {
+    printw("-");
+    x = x + 1;
+  }
+  
+  ///////////////////////////////////////////////
+  //         Establish tcp connection          //
+  ///////////////////////////////////////////////
+
+  uint16_t port = 61234;
+  int sockfd, connfd = 0;
+  struct sockaddr_in my_addr;
+  socklen_t sin_size;
+
+  char recv_buff[MAX_BUFF] = {0};
+  int nbytes = 0;
+  int ret = 0;
+
+  memset(&my_addr, 0, sizeof(struct sockaddr_in));
+  my_addr.sin_family = AF_INET;
+  my_addr.sin_addr.s_addr = INADDR_ANY;
+  my_addr.sin_port = htons(port);
+
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+  ret = bind(sockfd, (const struct sockaddr *)&my_addr, sizeof(my_addr));
+  if (ret != 0) {
+    perror("Bind Failed");
+    exit(EXIT_FAILURE);
+  }
+
+  ///////////////////////////////////////////////
+
+  noecho();
+  y = 1;
+  x = 0;
   int c;
+  char temp;
+  char send_buff[LINE_LENGTH - 5] = {0};
   keypad(stdscr, TRUE);
+  move(y, x);
+  printw("Me: ");
+  x = 5;
   move(y, x);
   while ((c = getch()) != 27) {
     if ((c == KEY_UP) || (c == KEY_DOWN) || (c == KEY_LEFT) || (c == KEY_RIGHT)) {
       arrowKey(c, &y, &x); // processes arrow key input
     }
     else if (c == 10) {
-      y = y + 1;
-      x = 0;
+      /*
+       * Insert code that packages up line and sends to other user
+       * Testing just packages up code and places it below separator
+       */
+      /////////////////////////////
+      // Get message from sender
+      x = 5;
+      while (x != LINE_LENGTH) {
+	move(y, x);
+	temp = inch();
+	strcat(send_buff, &temp);
+	x = x + 1;
+      }
+
+      ///////////////////////////////////
+      // Print message below separator
+      mvaddch(5, 3, '>');
+      x = 5;
+      y = 5;
       move(y, x);
+      addstr(send_buff);
+      send_buff[0] = '\0';
+
+      /////////////////////////////////////////
+      // Return cursor to begin new message
+      y = 1;
+      x = 5;
+      move(y, x);
+      int count = LINE_LENGTH - 5;
+      while (count > 0) {
+	delch();
+	count = count - 1;
+      }
+    }
+    else if (c == KEY_BACKSPACE) {
+      if (x != 5) {
+	x = x - 1;
+	move(y, x);
+	printw(" ");
+	move(y, x);
+      }
+    }
+    else if (c == KEY_DC) {
+      delch();
     }
     else {
-      printw("%c", c); // prints characters from input
-      x = x + 1;
-      if (x > 80) {
-	x = 0;
-	y = y + 1;
+      if (x != (LINE_LENGTH)) {
+	addch(c);
+	x = x + 1;
+	move(y, x);
       }
-      move(y, x);
     }
   }
 
@@ -39,31 +135,25 @@ int main() {
 void arrowKey(int c, int* y, int* x) {
   switch (c) {
   case KEY_UP:
-    if (*y != 0) 	
-      *y = *y - 1;
-    move(*y, *x);
+    //if (*y != 0) 	
+    //*y = *y - 1;
+    //move(*y, *x);
     break;
   case KEY_DOWN:
-    *y = *y + 1;
-    move(*y, *x);
+    //*y = *y + 1;
+    //move(*y, *x);
     break;
   case KEY_LEFT:
-    if ((*x == 0) && (*y != 0)) {
-      *x = 80;
-      *y = *y - 1; // wraps cursor to previous line
-    }
-    else if (*x != 0) {	
+    if (*x != 5) {
       *x = *x - 1;
+      move(*y, *x);
     }
-    move(*y, *x);
     break;
   case KEY_RIGHT:
-    *x = *x + 1;
-    if (*x > 80) { // wraps cursor to next line
-      *x = 0;
-      *y = *y + 1;
+    if (*x < (LINE_LENGTH)) {
+      *x = *x + 1;
+      move(*y, *x);
     }
-    move(*y, *x);
     break;
   }
 }
