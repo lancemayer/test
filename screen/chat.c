@@ -7,10 +7,21 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 
 #define LINE_LENGTH 50
-#define MAX_BUFF 4096
+#define MAX_BUFF 25
+
+void *send_thread() {
+  //create buffer for thread
+}
+
+void *recv_thread() {
+  //create buffer for thread
+  //set local nbytes
+  //while loop for recv thread
+}
 
 void arrowKey(int, int*, int*);
 
@@ -23,7 +34,7 @@ int main() {
   initscr();
   int y = 3;
   int x = 0;
-  
+
   move(y, x);
   while (x < (LINE_LENGTH + 1)) {
     printw("-");
@@ -31,10 +42,10 @@ int main() {
   }
   
   ///////////////////////////////////////////////
-  //         Establish tcp connection          //
+  //         Establish udp connection          //
   ///////////////////////////////////////////////
 
-  uint16_t port = 61234;
+  int port = 61111;
   int sockfd, connfd = 0;
   struct sockaddr_in my_addr;
   socklen_t sin_size;
@@ -63,7 +74,7 @@ int main() {
   x = 0;
   int c;
   char temp;
-  char send_buff[LINE_LENGTH - 5] = {0};
+  char send_buff[MAX_BUFF] = {0};
   keypad(stdscr, TRUE);
   move(y, x);
   printw("Me: ");
@@ -88,20 +99,32 @@ int main() {
 	x = x + 1;
       }
 
+      // send buffer to other user
+
       ///////////////////////////////////
       // Print message below separator
-      mvaddch(5, 3, '>');
-      x = 5;
-      y = 5;
-      move(y, x);
-      addstr(send_buff);
-      send_buff[0] = '\0';
+      //addstr(send_buff);
+      //send_buff[0] = '\0';
+
+      while (1) {
+	mvaddch(5, 3, '>');
+	x = 5;
+	y = 5;
+	move(y, x);
+	nbytes =recvfrom(sockfd, recv_buff, MAX_BUFF, 0, NULL, NULL);
+	
+	addstr(recv_buff);
+	move(y, x);
+	refresh();
+	bzero(recv_buff, 25);
+      }
 
       /////////////////////////////////////////
       // Return cursor to begin new message
       y = 1;
       x = 5;
       move(y, x);
+
       int count = LINE_LENGTH - 5;
       while (count > 0) {
 	delch();
