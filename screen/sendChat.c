@@ -1,4 +1,4 @@
-1;2c#include <ncurses.h>
+#include <ncurses.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
