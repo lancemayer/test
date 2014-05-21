@@ -8,16 +8,80 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <signal.h>
 
+#define SRV_IP "127.0.0.1"
 
+#define SEND_PORT 61234
+#define RECV_PORT 61235
 #define LINE_LENGTH 50
-#define MAX_BUFF 25
+#define MAX_BUFF 32
 
-void *send_thread() {
+////////////////
+//  Globals   //
+////////////////
+
+int recv_sock, send_sock = 0;
+pthread_t send_t;
+pthread_t recv_t;
+
+
+//////////////////////
+//  Signal Handler  //
+//////////////////////
+
+void user() {
+  pthread_cancel(send_t);
+  pthread_cancel(recv_t);
+}
+
+
+//////////////////////////////////////
+//  Sending and receiving threads   //
+//////////////////////////////////////
+
+void *send_work() {
+  int y = 1;
+  int x = 5;
+  char c;
+  move(y, x);
+  while ((c = getch()) != 27) {
+    if ((c == KEY_UP) || (c == KEY_DOWN) || (c == KEY_LEFT) || (c == KEY_RIGHT)) {
+      arrowKey(c, &y, &x); // processes arrow key input      
+    }
+    if (c == 10) {
+      y = 1;
+      x = 5;
+      move(y, x);
+
+
+      //package up current message and send to other user
+    }
+    //cancel threads and exit cleanly 
+  }
+
   //create buffer for thread
 }
 
-void *recv_thread() {
+void *recv_work() {
+  char recv_buff[10][25] = {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0};
+
+  while (1) {
+    recvfrom(send_sock, recv_buff, 25, 0, NULL, NULL);
+    
+    int msg_count = 9;
+    while (msg_count > 0) {
+      // move messages down the line
+    }
+
+    // Insert new message into first slot of array
+
+    msg_count = 0;
+    while ((msg_count < 10) && (recv_buff[msg_count][0] != '\0')) {
+      //print messages every other line
+    }
+  }
+
   //create buffer for thread
   //set local nbytes
   //while loop for recv thread
@@ -41,32 +105,66 @@ int main() {
     x = x + 1;
   }
   
-  ///////////////////////////////////////////////
-  //         Establish udp connection          //
-  ///////////////////////////////////////////////
+  //////////////////////////////////////////////////////
+  //         Establish udp SERVER connection          //
+  //////////////////////////////////////////////////////
 
-  int port = 61111;
-  int sockfd, connfd = 0;
-  struct sockaddr_in my_addr;
-  socklen_t sin_size;
-
-  char recv_buff[MAX_BUFF] = {0};
-  int nbytes = 0;
+  struct sockaddr_in recv_addr, send_addr;
+  socklen_t sin_size = sizeof(send_addr);
+  int recvlen;
   int ret = 0;
 
-  memset(&my_addr, 0, sizeof(struct sockaddr_in));
-  my_addr.sin_family = AF_INET;
-  my_addr.sin_addr.s_addr = INADDR_ANY;
-  my_addr.sin_port = htons(port);
+  memset(&my_addr, 0, sizeof(recv_addr));
+  recv_addr.sin_family = AF_INET;
+  recv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  recv_addr.sin_port = htons(RECV_PORT);
 
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  recv_sock = socket(AF_INET, SOCK_DGRAM, 0);
 
-  ret = bind(sockfd, (const struct sockaddr *)&my_addr, sizeof(my_addr));
+  ret = bind(sockfd, (const struct sockaddr *)&recv_addr, sizeof(recv_addr));
   if (ret != 0) {
     perror("Bind Failed");
     exit(EXIT_FAILURE);
   }
 
+  //////////////////////////////////////////////////////
+  //         Establish udp CLIENT connection          //
+  //////////////////////////////////////////////////////
+
+  memset(&recv_addr, 0, sizeof(recv_addr));
+  rem_addr.sin_family = AF_INET;
+  rem_addr.sin_port = htons(PORT);
+
+  if (inet_aton(SRV_IP, &rem_addr.sin_addr) == 0) {
+    printw("inet_aton() failed");
+    exit(1);
+  }
+
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+
+  /////////////////////////////////
+  //       Signal Handling       //
+  /////////////////////////////////
+
+  struct sigaction mysig;
+
+  sigset_t proccess_mask;
+
+  mysig.sa_handler = &user;
+
+  sigfillset( &mysig.sa_mask );
+
+  sigaction( SIGTERM, &mysig, NULL);
+
+  sigfillset( &proccess_mask );
+  sigdelset( &proccess_mask, SIGTERM);
+
+  pthread_sigmask(SIG_SETMASK, &proccess_mask, NULL);
+
+
+  ///////////////////////////////////////////////
+  //          Screen Interaction               //
   ///////////////////////////////////////////////
 
   noecho();
@@ -80,77 +178,15 @@ int main() {
   printw("Me: ");
   x = 5;
   move(y, x);
-  while ((c = getch()) != 27) {
-    if ((c == KEY_UP) || (c == KEY_DOWN) || (c == KEY_LEFT) || (c == KEY_RIGHT)) {
-      arrowKey(c, &y, &x); // processes arrow key input
-    }
-    else if (c == 10) {
-      /*
-       * Insert code that packages up line and sends to other user
-       * Testing just packages up code and places it below separator
-       */
-      /////////////////////////////
-      // Get message from sender
-      x = 5;
-      while (x != LINE_LENGTH) {
-	move(y, x);
-	temp = inch();
-	strcat(send_buff, &temp);
-	x = x + 1;
-      }
 
-      // send buffer to other user
+  pthread_create(&send_t, NULL, send_work, NULL);
+  pthread_create(&recv_t, NULL, recv_work, NULL);
 
-      ///////////////////////////////////
-      // Print message below separator
-      //addstr(send_buff);
-      //send_buff[0] = '\0';
+  pthread_join(sent_t, NULL);
+  pthread_join(recv_t, NULL);
 
-      while (1) {
-	mvaddch(5, 3, '>');
-	x = 5;
-	y = 5;
-	move(y, x);
-	nbytes =recvfrom(sockfd, recv_buff, MAX_BUFF, 0, NULL, NULL);
-	
-	addstr(recv_buff);
-	move(y, x);
-	refresh();
-	bzero(recv_buff, 25);
-      }
-
-      /////////////////////////////////////////
-      // Return cursor to begin new message
-      y = 1;
-      x = 5;
-      move(y, x);
-
-      int count = LINE_LENGTH - 5;
-      while (count > 0) {
-	delch();
-	count = count - 1;
-      }
-    }
-    else if (c == KEY_BACKSPACE) {
-      if (x != 5) {
-	x = x - 1;
-	move(y, x);
-	printw(" ");
-	move(y, x);
-      }
-    }
-    else if (c == KEY_DC) {
-      delch();
-    }
-    else {
-      if (x != (LINE_LENGTH)) {
-	addch(c);
-	x = x + 1;
-	move(y, x);
-      }
-    }
-  }
-
+  close(recv_sock);
+  close(send_sock);
   endwin();
   return 0;
 }
